@@ -1,0 +1,32 @@
+initialize() {
+    if (exists("seed")) {
+        setSeed(asInteger(seed));
+    }
+    initializeTreeSeq();
+    initializeMutationRate(1e-7);
+    initializeMutationType("m1", 0.5, "f", 0.0);
+    initializeGenomicElementType("g1", m1, 1); 
+    initializeGenomicElement(g1,0, 999);
+    initializeRecombinationRate(1e-8);
+}
+
+1 late() {
+    if (exists("infile")) {
+        catn("Reading previous sim from file "+infile);
+        sim.readFromPopulationFile(infile);
+        p1.setSubpopulationSize(asInteger(N));
+    } else {
+        sim.addSubpop("p1", asInteger(N));
+    }
+    // rescheduling the time to end simulation
+    sim.rescheduleScriptBlock(s0, generations=sim.generation+asInteger(gens));
+}
+
+// final event: save tree seq
+s0 1 late() {
+	sim.treeSeqRememberIndividuals(sim.subpopulations.individuals);
+    sim.treeSeqOutput(outfile);
+	catn("Saving output tree in generation "+sim.generation);
+    catn("To file: "+outfile);
+}
+
