@@ -77,4 +77,5 @@ def graft(ts1, ts2, matched_nodes):
             new_parent = all_nodes[e.parent==all_nodes[:,1]][0][0]
             new_child = all_nodes[e.child==all_nodes[:,1]][0][0]
             new_tables.edges.add_row(left = e.left, right = e.right, parent=new_parent, child=new_child)
+    new_tables.sort()
     return new_tables.tree_sequence(), all_nodes
