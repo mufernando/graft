@@ -43,7 +43,7 @@ def match_nodes(ts1, ts2, T2=0):
     sids_1 = np.array([n.metadata.slim_id for n in ts1.nodes()])
     # looping through nodes in ts2 and finding equiv in ts1
     for k, n in enumerate(ts2.nodes()):
-        print(k)
+        #print(k)
         # nodes should be equiv only at split or before it happened
         if n.time >= T2:
             # rn just checking slim ids, but would be good
@@ -65,16 +65,16 @@ def graft(ts1, ts2, matched_nodes):
     new_nodes = []
     # need to loop throgh nodes in ts2, find the unmatched nodes
     # and add them to the ts1 node table
-    for k, n in ts2.nodes():
-        if k not in matched_nodes[:,1]:
-            print(k)
-            break
+    for k, n in enumerate(ts2.nodes()):
+        if not k in matched_nodes[:,1]:
             nid = new_tables.nodes.add_row(**node_asdict(n))
-            new_nodes.append(new_nodes, [nid,k])
+            new_nodes.append([nid,k])
+    new_nodes=np.array(new_nodes)
+    all_nodes=np.concatenate((new_nodes, matched_nodes), axis=0)
     # now we need to add the edges
-    for i, e in ts2.edges():
-        if e.parent in new_nodes[:,1]:
-
-            new_tables.edges.add_row()
-    return new_tables, matched_nodes
-
+    for i, e in enumerate(ts2.edges()):
+        if (e.parent in new_nodes[:,1]) or e.child in new_nodes[:,1]:
+            new_parent = all_nodes[e.parent==all_nodes[:,1]][0][0]
+            new_child = all_nodes[e.child==all_nodes[:,1]][0][0]
+            new_tables.edges.add_row(left = e.left, right = e.right, parent=new_parent, child=new_child)
+    return new_tables.tree_sequence(), all_nodes
