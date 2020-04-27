@@ -12,6 +12,9 @@ initialize() {
 
 1 late() {
     if (exists("infile")) {
+        if (!fileExists(infile)) {
+           stop("File " + infile + " does not exist in directory " + getwd());
+        }
         catn("Reading previous sim from file "+infile);
         sim.readFromPopulationFile(infile);
         p1.setSubpopulationSize(asInteger(N));

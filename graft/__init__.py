@@ -29,7 +29,7 @@ def find_split_time(ts1,ts2):
             T2 = abs(last_gen-slim_gens2[-1])
             break
         last_gen = ts1.slim_provenances[i].slim_generation
-    return T1,T2
+    return T1, T2
 
 def match_nodes(ts1, ts2, T2=0):
     """
