@@ -54,6 +54,7 @@ class TestMatchNodes(unittest.TestCase):
 class TestGraft(unittest.TestCase):
 
     def test_simple_example(self):
+        ts1, ts2 = get_examples(100, 100)
         T1, T2 = find_split_time(ts1, ts2)
         matched_nodes = match_nodes(ts1, ts2, T2)
 
