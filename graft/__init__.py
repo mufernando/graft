@@ -1,5 +1,6 @@
 import numpy as np
 import pyslim
+import tskit
 
 def get_slim_gens(ts):
     return np.array([p.slim_generation for p in ts.slim_provenances])
@@ -120,10 +121,15 @@ def graft(ts1, ts2, matched_nodes):
             if m.parent in new_muts:
                 parent = new_muts[m.parent]
             mid=new_tables.mutations.add_row(site=sid, node=new_node,derived_state=m.derived_state, parent=parent, metadata=m.metadata)
+            if parent >= 0 and parent >= mid:
+                break
             new_muts[k] = mid
     new_tables.sort()
     for i, mut in enumerate(new_tables.mutations):
         if mut.parent >= 0 and mut.parent >= i:
             print (f"Parent {mut.parent} and Child {i}")
+    new_tables.mutations.set_columns(site=new_tables.mutations.site, node=new_tables.mutations.node,derived_state=new_tables.mutations.derived_state, derived_state_offset=new_tables.mutations.derived_state_offset, parent=np.full(new_tables.mutations.parent.shape, tskit.NULL, dtype='int32'), metadata=new_tables.mutations.metadata, metadata_offset=new_tables.mutations.metadata_offset)
     new_tables.deduplicate_sites()
+    new_tables.build_index()
+    new_tables.compute_mutation_parents()
     return new_tables.tree_sequence(), all_nodes

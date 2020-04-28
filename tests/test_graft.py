@@ -70,15 +70,17 @@ class TestGraft(unittest.TestCase):
         tables1 = ts1.simplify().tables
         self.assertEqual(tables1g.nodes, tables1.nodes)
         self.assertEqual(tables1g.edges, tables1.edges)
+        self.assertEqual(tables1g.sites, tables1.sites)
         self.assertEqual(tables1g.mutations, tables1.mutations)
 
         # testing ts2
-        samp = ts3.samples()
+        samp = ts2.samples()
         new_samp = np.array([all_nodes[nid==all_nodes[:,1]][0][0] for nid in list(samp)])
         tables2 = ts2.simplify().tables
         tables2g = tsg.simplify(new_samp).tables
         self.assertEqual(tables2g.nodes, tables2.nodes)
-        self.assertEqual(tables3g.edges, tables2.edges)
+        self.assertEqual(tables2g.edges, tables2.edges)
+        self.assertEqual(tables2g.sites, tables2.sites)
         self.assertEqual(tables2g.mutations, tables2.mutations)
         # tests: graft one tree to another, simplify over just the nodes in original tree, test if the tables are the same
         # test: take a grafted tree, simplify over samples in first and second tree, graft them back together and test if the same
