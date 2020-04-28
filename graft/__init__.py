@@ -122,5 +122,8 @@ def graft(ts1, ts2, matched_nodes):
             mid=new_tables.mutations.add_row(site=sid, node=new_node,derived_state=m.derived_state, parent=parent, metadata=m.metadata)
             new_muts[k] = mid
     new_tables.sort()
+    for i, mut in enumerate(new_tables.mutations):
+        if mut.parent >= 0 and mut.parent >= i:
+            print (f"Parent {mut.parent} and Child {i}")
     new_tables.deduplicate_sites()
     return new_tables.tree_sequence(), all_nodes
