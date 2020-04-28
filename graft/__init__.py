@@ -54,13 +54,40 @@ def match_nodes(ts1, ts2, T2=0):
             matched_nodes.append([nid[0],k])
     return np.array(matched_nodes)
 
+def add_time(ts, dt):
+    '''
+    This function returns a tskit.TreeSequence in which `dt`
+    has been added to the times in all nodes.
+    '''
+    tables = ts.tables
+    tables.nodes.set_columns(flags=tables.nodes.flags, time=tables.nodes.time+dt,population=tables.nodes.population,individual=tables.nodes.individual,metadata=tables.nodes.metadata,metadata_offset=tables.nodes.metadata_offset)
+    return tables.tree_sequence()
+
+def reset_time(ts1, ts2):
+    '''
+    Give two tskit.TreeSequences(), returns the respective tree
+    sequences but now with correspondent times. That is, the times
+    in the tree with the smallest `max_root_time` are shifted so
+    that they are comparable to the other tree.
+    '''
+    time_diff = ts1.max_root_time - ts2.max_root_time
+    if time_diff > 0:
+        ts2 = add_time(ts2, time_diff)
+    else:
+        ts1 = add_time(ts1, abs(time_diff))
+    return(ts1, ts2)
+
 def graft(ts1, ts2, matched_nodes):
     """
     Returns a tree sequence obtained by grafting together the
     two tree sequences along the nodes in ``matched_nodes``,
     which should be a list of pairs of node IDs...
-    More precisely, ts2 is grafted onto ts1.
+    More precisely, ts2 is grafted onto ts1. ``time_diff``
+    indicates the time difference between ts1 and ts2. i.e.,
+    the difference between the time of nodes that existed in
+    both ts1 and ts2.
     """
+    ts1, ts2 = reset_time(ts1, ts2)
     new_tables = ts1.tables
     new_nodes = []
     # need to loop throgh nodes in ts2, find the unmatched nodes
@@ -74,8 +101,26 @@ def graft(ts1, ts2, matched_nodes):
     # now we need to add the edges
     for i, e in enumerate(ts2.edges()):
         if (e.parent in new_nodes[:,1]) or e.child in new_nodes[:,1]:
+            # translating the node ids from ts2 to new
             new_parent = all_nodes[e.parent==all_nodes[:,1]][0][0]
             new_child = all_nodes[e.child==all_nodes[:,1]][0][0]
             new_tables.edges.add_row(left = e.left, right = e.right, parent=new_parent, child=new_child)
+    # grafting sites and muts
+    new_muts = {}
+    for k, m in enumerate(ts2.mutations()):
+        if m.node in new_nodes[:,1]:
+            # translating node id
+            new_node = new_nodes[m.node==new_nodes[:,1]][0][0]
+            # add site
+            s = ts2.site(m.site)
+            sid = new_tables.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
+            # add mutation
+            parent = m.parent
+            # if parent was also new need to translate the id
+            if m.parent in new_muts:
+                parent = new_muts[m.parent]
+            mid=new_tables.mutations.add_row(site=sid, node=new_node,derived_state=m.derived_state, parent=parent, metadata=m.metadata)
+            new_muts[k] = mid
     new_tables.sort()
+    new_tables.deduplicate_sites()
     return new_tables.tree_sequence(), all_nodes

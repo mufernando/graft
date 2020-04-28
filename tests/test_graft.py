@@ -8,19 +8,17 @@ from graft import *
 
 
 def run_slim_script(slimfile, args=''):
-    outdir = os.path.dirname(slimfile)
-    script = os.path.basename(slimfile)
-    print("running:: " + "cd " + outdir + " && slim -s 23 " + args + " " + script)
-    out = os.system("cd " + outdir + " && slim -s 23 " + args + " " + script + ">/dev/null")
+    print("running:: " + "slim -s 23 " + args + " " + slimfile)
+    out = os.system("slim -s 23 " + args + " " + slimfile + ">/dev/null")
     return out
 
 
 def get_examples(T1, T2):
     print(os.getcwd())
     # note: could make N and gens parameters here
-    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens=100 -d \"outfile='data/root.trees'\"")
-    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens={} -d \"infile='data/root.trees'\" -d 'outfile=\"data/branch1.trees\"'".format(T1))
-    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens={} -d \"infile='data/root.trees'\" -d 'outfile=\"data/branch2.trees\"'".format(T2))
+    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens=100 -d \"outfile='tests/data/root.trees'\"")
+    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens={} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch1.trees\"'".format(T1))
+    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens={} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch2.trees\"'".format(T2))
     ts1 = pyslim.load("tests/data/branch1.trees")
     ts2 = pyslim.load("tests/data/branch2.trees")
     return ts1, ts2
@@ -71,13 +69,15 @@ class TestGraft(unittest.TestCase):
         tables1 = ts1.simplify().tables
         self.assertEqual(tables1g.nodes, tables1.nodes)
         self.assertEqual(tables1g.edges, tables1.edges)
+        self.assertEqual(tables1g.mutations, tables1.mutations)
 
         # testing ts2
-        samp = ts2.samples()
+        samp = ts3.samples()
         new_samp = np.array([all_nodes[nid==all_nodes[:,1]][0][0] for nid in list(samp)])
         tables2 = ts2.simplify().tables
         tables2g = tsg.simplify(new_samp).tables
         self.assertEqual(tables2g.nodes, tables2.nodes)
-        self.assertEqual(tables2g.edges, tables2.edges)
+        self.assertEqual(tables3g.edges, tables2.edges)
+        self.assertEqual(tables2g.mutations, tables2.mutations)
         # tests: graft one tree to another, simplify over just the nodes in original tree, test if the tables are the same
         # test: take a grafted tree, simplify over samples in first and second tree, graft them back together and test if the same
