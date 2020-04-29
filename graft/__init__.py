@@ -91,6 +91,8 @@ def graft(ts1, ts2, node_map21):
     new_tables = ts1.tables
     # mapping nodes in ts2 to new nodes in the grafted tables
     new_node_map2new = {}
+    # mapping of individuals in ts2 to new
+    new_ind_map2new = {}
     # adding the pops in ts2 to new
     pop_map2new = {}
     for i, pop in enumerate(ts2.tables.populations):
@@ -101,6 +103,13 @@ def graft(ts1, ts2, node_map21):
     for k, n in enumerate(ts2.nodes()):
         if not k in node_map21:
             n.population = pop_map2new[n.population]
+            # adding individual
+            if n.individual > 0:
+                ind = ts2.individual(n.individual)
+                iid = new_tables.individuals.add_row(flags=ind.flags, location=ind.location, metadata=ind.metadata)
+                new_ind_map2new[n.individual] = iid
+                n.individual=iid
+            # addingn node
             nid = new_tables.nodes.add_row(**node_asdict(n))
             new_node_map2new[k] = nid
     all_node_map2new = {}
