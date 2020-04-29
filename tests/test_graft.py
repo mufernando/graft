@@ -38,13 +38,13 @@ class TestMatchNodes(unittest.TestCase):
 
     def verify_match_nodes(self, ts1, ts2):
         T1, T2 = find_split_time(ts1, ts2)
-        matched_nodes = match_nodes(ts1, ts2, T2)
+        node_map21 = match_nodes(ts1, ts2, T2)
         # note: should also check that we got all the nodes
-        for (a, b) in matched_nodes:
-            n1 = ts1.node(a)
-            n2 = ts2.node(b)
+        for a,b in node_map21.items():
+            n1 = ts1.node(b)
+            n2 = ts2.node(a)
             self.assertGreaterEqual(n2.time, T2)
-            self.assertEqual(n1.metadata.slim_id, n2.metatdata.slim_id)
+            self.assertEqual(n1.metadata.slim_id, n2.metadata.slim_id)
 
     def test_simple_example(self):
         ts1, ts2 = get_examples(100, 100)
