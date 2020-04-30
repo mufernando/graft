@@ -62,7 +62,8 @@ class TestGraft(unittest.TestCase):
         ts1 = ts1.tables.tree_sequence()
         ts2 = ts2.tables.tree_sequence()
 
-        tsg, all_node_map2new, pop_map2new = graft(ts1, ts2, node_map21)
+        tsg, maps = graft(ts1, ts2, node_map21)
+        node_map2new = maps[0]
 
         # ts1 from grafted
         ts1g = tsg.simplify(ts1.samples())
@@ -75,7 +76,7 @@ class TestGraft(unittest.TestCase):
 
         # testing ts2
         samp = ts2.samples()
-        new_samp = np.array([all_node_map2new[nid] for nid in list(samp)])
+        new_samp = np.array([node_map2new[nid] for nid in list(samp)])
         tables2 = ts2.simplify().tables
         tables2g = tsg.simplify(new_samp).tables
         # the test for the nodes table will be more complicated

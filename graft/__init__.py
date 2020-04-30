@@ -14,6 +14,42 @@ def node_asdict(node):
 	"flags" : node.flags
     }
 
+def get_provenance(ts, only_last=True):
+    '''
+    Extracts model type, slim generation, and remembmered node count from either
+    the last entry in the provenance table that is tagged with "program"="SLiM"
+    (if ``only_last=True``) or a list of all of them (otherwise).
+
+    :param SlimTreeSequence ts: The tree sequence.
+    :param bool only_last: Whether to return only the last SLiM provenance entry,
+        (otherwise, returns a list of all SLiM entries).
+    :rtype ProvenanceMetadata:
+    '''
+    provenances = []
+    for j, p in enumerate(ts.tables.provenances):
+        this_record = json.loads(p.record)
+        is_slim, this_file_version = _slim_provenance_version(this_record)
+        if is_slim:
+            record = this_record
+            file_version = this_file_version
+            if file_version == "0.1":
+                out = ProvenanceMetadata(record['model_type'],
+                                         record['generation'],
+                                         file_version)
+            else: # >= 0.2
+                out = ProvenanceMetadata(record['parameters']['model_type'],
+                                         record['slim']["generation"],
+                                         file_version)
+            provenances.append(out)
+
+    if len(provenances) == 0:
+        raise ValueError("Tree sequence contains no SLiM provenance entries"
+                          "(or your pyslim is out of date).")
+    if only_last:
+        return provenances[-1]
+    else:
+        return provenances
+
 def find_split_time(ts1,ts2):
     """
     Given two SLiM tree sequences with shared history, this
@@ -96,14 +132,16 @@ def graft(ts1, ts2, node_map21):
     ind_map2new = {}
     # adding the pops in ts2 to new
     pop_map2new = {}
-    for i, pop in enumerate(ts2.tables.populations):
-        pid = new_tables.populations.add_row(pop.metadata)
-        pop_map2new[i]=pid
     # need to loop throgh nodes in ts2, find the unmatched nodes
     # and add them to the ts1 node table
     for k, n in enumerate(ts2.nodes()):
         if not k in node_map21:
-            n.population = pop_map2new[n.population]
+            if not n.population in pop_map2new:
+                pop = ts2.tables.populations[n.population]
+                pid = new_tables.populations.add_row(pop.metadata)
+                pop_map2new[n.population]=pid
+            else:
+                n.population = pop_map2new[n.population]
             # adding individual
             if n.individual > 0:
                 ind = ts2.individual(n.individual)
@@ -136,9 +174,7 @@ def graft(ts1, ts2, node_map21):
             mid=new_tables.mutations.add_row(site=sid, node=new_node,derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
             new_muts[k] = mid
     new_tables.sort()
-    # need to reset the parent-child relations in mutations
-    #new_tables.mutations.set_columns(site=new_tables.mutations.site, node=new_tables.mutations.node,derived_state=new_tables.mutations.derived_state, derived_state_offset=new_tables.mutations.derived_state_offset, parent=np.full(new_tables.mutations.parent.shape, tskit.NULL, dtype='int32'), metadata=new_tables.mutations.metadata, metadata_offset=new_tables.mutations.metadata_offset)
     new_tables.deduplicate_sites()
     new_tables.build_index()
     new_tables.compute_mutation_parents()
-    return new_tables.tree_sequence(), node_map2new, pop_map2new
+    return new_tables.tree_sequence(), (node_map2new, pop_map2new, ind_map2new)
