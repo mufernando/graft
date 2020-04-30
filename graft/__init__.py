@@ -90,9 +90,10 @@ def graft(ts1, ts2, node_map21):
     ts1, ts2 = reset_time(ts1, ts2)
     new_tables = ts1.tables
     # mapping nodes in ts2 to new nodes in the grafted tables
-    new_node_map2new = {}
+    node_map2new = {}
+    node_map2new.update(node_map21)
     # mapping of individuals in ts2 to new
-    new_ind_map2new = {}
+    ind_map2new = {}
     # adding the pops in ts2 to new
     pop_map2new = {}
     for i, pop in enumerate(ts2.tables.populations):
@@ -107,44 +108,37 @@ def graft(ts1, ts2, node_map21):
             if n.individual > 0:
                 ind = ts2.individual(n.individual)
                 iid = new_tables.individuals.add_row(flags=ind.flags, location=ind.location, metadata=ind.metadata)
-                new_ind_map2new[n.individual] = iid
+                ind_map2new[n.individual] = iid
                 n.individual=iid
             # addingn node
             nid = new_tables.nodes.add_row(**node_asdict(n))
-            new_node_map2new[k] = nid
-    all_node_map2new = {}
-    all_node_map2new.update(node_map21)
-    all_node_map2new.update(new_node_map2new)
+            node_map2new[k] = nid
+    # creating a set with nodes that are new to ts1
+    new_nodes=set(node_map2new)-set(node_map21)
     # now we need to add the edges
     for i, e in enumerate(ts2.edges()):
-        if (e.parent in new_node_map2new) or e.child in new_node_map2new:
+        if (e.parent in new_nodes) or (e.child in new_nodes):
+            if (e.parent in new_nodes):
+                assert e.child in new_nodes, "Parent is new but child is not."
             # translating the node ids from ts2 to new
-            new_parent = all_node_map2new[e.parent]
-            new_child = all_node_map2new[e.child]
+            new_parent = node_map2new[e.parent]
+            new_child = node_map2new[e.child]
             new_tables.edges.add_row(left = e.left, right = e.right, parent=new_parent, child=new_child)
     # grafting sites and muts
     new_muts = {}
     for k, m in enumerate(ts2.mutations()):
-        if m.node in new_node_map2new:
+        if m.node in new_nodes:
             # translating node id
-            new_node = new_node_map2new[m.node]
+            new_node = node_map2new[m.node]
             # add site
             s = ts2.site(m.site)
             sid = new_tables.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
-            # add mutation
-            parent = m.parent
-            # if parent was also new need to translate the id
-            if m.parent in new_muts:
-                parent = new_muts[m.parent]
-            mid=new_tables.mutations.add_row(site=sid, node=new_node,derived_state=m.derived_state, parent=parent, metadata=m.metadata)
-            if parent >= 0 and parent >= mid:
-                break
+            mid=new_tables.mutations.add_row(site=sid, node=new_node,derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
             new_muts[k] = mid
-    new_indivs = {}
     new_tables.sort()
     # need to reset the parent-child relations in mutations
-    new_tables.mutations.set_columns(site=new_tables.mutations.site, node=new_tables.mutations.node,derived_state=new_tables.mutations.derived_state, derived_state_offset=new_tables.mutations.derived_state_offset, parent=np.full(new_tables.mutations.parent.shape, tskit.NULL, dtype='int32'), metadata=new_tables.mutations.metadata, metadata_offset=new_tables.mutations.metadata_offset)
+    #new_tables.mutations.set_columns(site=new_tables.mutations.site, node=new_tables.mutations.node,derived_state=new_tables.mutations.derived_state, derived_state_offset=new_tables.mutations.derived_state_offset, parent=np.full(new_tables.mutations.parent.shape, tskit.NULL, dtype='int32'), metadata=new_tables.mutations.metadata, metadata_offset=new_tables.mutations.metadata_offset)
     new_tables.deduplicate_sites()
     new_tables.build_index()
     new_tables.compute_mutation_parents()
-    return new_tables.tree_sequence(), all_node_map2new, pop_map2new
+    return new_tables.tree_sequence(), node_map2new, pop_map2new
