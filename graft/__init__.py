@@ -1,6 +1,7 @@
 import numpy as np
 import pyslim
 import tskit
+import json
 
 def get_slim_gens(ts):
     return np.array([p.slim_generation for p in ts.slim_provenances])
@@ -14,58 +15,27 @@ def node_asdict(node):
 	"flags" : node.flags
     }
 
-def get_provenance(ts, only_last=True):
-    '''
-    Extracts model type, slim generation, and remembmered node count from either
-    the last entry in the provenance table that is tagged with "program"="SLiM"
-    (if ``only_last=True``) or a list of all of them (otherwise).
-
-    :param SlimTreeSequence ts: The tree sequence.
-    :param bool only_last: Whether to return only the last SLiM provenance entry,
-        (otherwise, returns a list of all SLiM entries).
-    :rtype ProvenanceMetadata:
-    '''
-    provenances = []
-    for j, p in enumerate(ts.tables.provenances):
-        this_record = json.loads(p.record)
-        is_slim, this_file_version = _slim_provenance_version(this_record)
-        if is_slim:
-            record = this_record
-            file_version = this_file_version
-            if file_version == "0.1":
-                out = ProvenanceMetadata(record['model_type'],
-                                         record['generation'],
-                                         file_version)
-            else: # >= 0.2
-                out = ProvenanceMetadata(record['parameters']['model_type'],
-                                         record['slim']["generation"],
-                                         file_version)
-            provenances.append(out)
-
-    if len(provenances) == 0:
-        raise ValueError("Tree sequence contains no SLiM provenance entries"
-                          "(or your pyslim is out of date).")
-    if only_last:
-        return provenances[-1]
-    else:
-        return provenances
-
 def find_split_time(ts1,ts2):
     """
     Given two SLiM tree sequences with shared history, this
     function returns the split times (in time ago) for each tree.
     """
-    T1 = 0
-    T2 = 0
     slim_gens1 = get_slim_gens(ts1)
     slim_gens2 = get_slim_gens(ts2)
-    for i, (p1, p2) in enumerate(zip(ts1.provenances(),ts2.provenances())):
+    # counting SLiM prov before chains diff
+    j = 0
+    # finding the first diff between provenance chains
+    for p1, p2 in zip(ts1.provenances(),ts2.provenances()):
         if p1 != p2:
-            assert i > 0, "No shared history between the two trees."
-            T1 = abs(last_gen-slim_gens1[-1])
-            T2 = abs(last_gen-slim_gens2[-1])
             break
-        last_gen = ts1.slim_provenances[i].slim_generation
+        record = json.loads(p1.record)
+        if record["software"]["name"] == "SLiM":
+            j += 1
+    if j == 0:
+        raise ValueError("No shared SLiM provenance entries.")
+    last_slim_gen = ts1.slim_provenances[j-1].slim_generation
+    T1 = abs(last_slim_gen - slim_gens1[-1])
+    T2 = abs(last_slim_gen - slim_gens2[-1])
     return T1, T2
 
 def match_nodes(ts1, ts2, T2=0):
