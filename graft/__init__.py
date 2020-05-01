@@ -92,6 +92,8 @@ def graft(ts1, ts2, node_map21):
     which should be a dictionary mapping nodes in ts2 that are
     equivalent to nodes in ts1.
     More precisely, ts2 is grafted onto ts1.
+    Populations of nodes new to ts1 are considered new in the
+    grafted tree sequence. Map is returned.
     """
     ts1, ts2 = reset_time(ts1, ts2)
     new_tables = ts1.tables
@@ -110,8 +112,8 @@ def graft(ts1, ts2, node_map21):
                 pop = ts2.tables.populations[n.population]
                 pid = new_tables.populations.add_row(pop.metadata)
                 pop_map2new[n.population]=pid
-            else:
-                n.population = pop_map2new[n.population]
+            # translating pop to new
+            n.population = pop_map2new[n.population]
             # adding individual
             if n.individual > 0:
                 ind = ts2.individual(n.individual)
