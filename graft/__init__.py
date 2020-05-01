@@ -128,8 +128,8 @@ def graft(ts1, ts2, node_map21):
     # now we need to add the edges
     for i, e in enumerate(ts2.edges()):
         if (e.parent in new_nodes) or (e.child in new_nodes):
-            if (e.parent in new_nodes):
-                assert e.child in new_nodes, "Parent is new but child is not."
+            if (e.parent in new_nodes) and (not e.child in new_nodes):
+                raise ValueError("Cannot graft nodes above existing nodes.")
             # translating the node ids from ts2 to new
             new_parent = node_map2new[e.parent]
             new_child = node_map2new[e.child]
