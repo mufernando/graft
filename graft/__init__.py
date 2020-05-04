@@ -71,21 +71,38 @@ def add_time(ts, dt):
     tables.nodes.set_columns(flags=tables.nodes.flags, time=tables.nodes.time+dt,population=tables.nodes.population,individual=tables.nodes.individual,metadata=tables.nodes.metadata,metadata_offset=tables.nodes.metadata_offset)
     return tables.tree_sequence()
 
-def reset_time(ts1, ts2):
+def reset_time(ts1, ts2, time_diff):
     '''
     Give two tskit.TreeSequences(), returns the respective tree
-    sequences but now with correspondent times. That is, the times
-    in the tree with the smallest `max_root_time` are shifted so
-    that they are comparable to the other tree.
+    sequences but now with correspondent times.
     '''
-    time_diff = ts1.max_root_time - ts2.max_root_time
     if time_diff > 0:
         ts2 = add_time(ts2, time_diff)
     else:
         ts1 = add_time(ts1, abs(time_diff))
     return(ts1, ts2)
 
-def graft(ts1, ts2, node_map21):
+
+def check_muts_at(ts1, ts2, node_map21):
+    mtable1 = ts1.tables.mutations
+    mtable2 = ts2.tables.mutations
+    nodes1 = list(node_map21.keys())
+    nodes2 = list(node_map21.values())
+    new1 = tskit.TableCollection()
+    new2 = tskit.TableCollection()
+    for m in mtable1:
+        if m.node in nodes1:
+            s = ts1.site(m.site)
+            sid = new1.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
+            new1.mutations.add_row(site=sid, node=m.node, derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
+    for m in mtable2:
+        if m.node in nodes2:
+            s = ts2.site(m.site)
+            sid = new2.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
+            new2.mutations.add_row(site=sid, node=node_map21[m.node], derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
+    muts_eq = new1==new2
+
+def graft(ts1, ts2, node_map21, T1, T2):
     """
     Returns a tree sequence obtained by grafting together the
     two tree sequences along the nodes in ``node_map21``,
@@ -94,8 +111,12 @@ def graft(ts1, ts2, node_map21):
     More precisely, ts2 is grafted onto ts1.
     Populations of nodes new to ts1 are considered new in the
     grafted tree sequence. Map is returned.
+    T1 and T2 are used to shift the time in the tree seqs.
+    It is used in cases where the after split portion of
+    are run for different number of generations in each of ts1
+    and ts2. If this is not the case set T1=T2=0
     """
-    ts1, ts2 = reset_time(ts1, ts2)
+    ts1, ts2 = reset_time(ts1, ts2, T1-T2)
     new_tables = ts1.tables
     # mapping nodes in ts2 to new nodes in the grafted tables
     node_map2new = {}
