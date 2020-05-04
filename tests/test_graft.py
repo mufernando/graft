@@ -62,7 +62,7 @@ class TestGraft(unittest.TestCase):
         ts1 = ts1.tables.tree_sequence()
         ts2 = ts2.tables.tree_sequence()
 
-        tsg, maps = graft(ts1, ts2, node_map21)
+        tsg, maps = graft(ts1, ts2, node_map21, T1, T2)
         node_map2new = maps[0]
 
         # ts1 from grafted
