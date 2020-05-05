@@ -13,12 +13,12 @@ def run_slim_script(slimfile, args=''):
     return out
 
 
-def get_examples(T1, T2):
+def get_examples(T1, T2, gens=100, N=100):
     print(os.getcwd())
     # note: could make N and gens parameters here
-    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens=100 -d \"outfile='tests/data/root.trees'\"")
-    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens={} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch1.trees\"'".format(T1))
-    run_slim_script("tests/recipe.slim", args="-d N=100 -d gens={} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch2.trees\"'".format(T2))
+    run_slim_script("tests/recipe.slim", args=f"-d N={N} -d gens={gens} -d \"outfile='tests/data/root.trees'\"")
+    run_slim_script("tests/recipe.slim", args=f"-d N={N} -d gens={T1} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch1.trees\"'")
+    run_slim_script("tests/recipe.slim", args=f"-d N={N} -d gens={T2} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch2.trees\"'")
     ts1 = pyslim.load("tests/data/branch1.trees")
     ts2 = pyslim.load("tests/data/branch2.trees")
     return ts1, ts2
@@ -69,7 +69,7 @@ class TestMatchNodes(unittest.TestCase):
 class TestGraft(unittest.TestCase):
 
     def test_simple_example(self):
-        ts1, ts2 = get_examples(35, 12)
+        ts1, ts2 = get_examples(35, 12, gens=4, N=4)
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
 
@@ -103,5 +103,9 @@ class TestGraft(unittest.TestCase):
         # all tables but the provenance table should be the same
         tables2.provenances.clear()
         tables2g.provenances.clear()
+        if tables2g.individuals != tables2.individuals:
+            for i1, i2 in zip(tables2.individuals, tables2g.individuals):
+                print(i1)
+                print(i2)
         self.assertEqual(tables2g, tables2)
 

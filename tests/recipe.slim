@@ -26,7 +26,7 @@ initialize() {
 }
 
 // final event: save tree seq
-s0 1 late() {
+s0 2 late() {
 	sim.treeSeqRememberIndividuals(sim.subpopulations.individuals);
     sim.treeSeqOutput(outfile);
 	catn("Saving output tree in generation "+sim.generation);
