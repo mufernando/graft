@@ -68,7 +68,9 @@ def add_time(ts, dt):
     has been added to the times in all nodes.
     '''
     tables = ts.tables
-    tables.nodes.set_columns(flags=tables.nodes.flags, time=tables.nodes.time+dt,population=tables.nodes.population,individual=tables.nodes.individual,metadata=tables.nodes.metadata,metadata_offset=tables.nodes.metadata_offset)
+    nodes_dict = tables.nodes.asdict()
+    nodes_dict['time'] = nodes_dict['time'] + dt
+    tables.nodes.set_columns(**nodes_dict)
     return tables.tree_sequence()
 
 def reset_time(ts1, ts2, time_diff):
@@ -78,31 +80,27 @@ def reset_time(ts1, ts2, time_diff):
     '''
     if time_diff > 0:
         ts2 = add_time(ts2, time_diff)
-    else:
+    elif time_diff < 0:
         ts1 = add_time(ts1, abs(time_diff))
     return(ts1, ts2)
 
+def check_shared_nodes(ts1, ts2, node_map21, T1=0, T2=0):
+    '''
+    Given two tree sequences with shared nodes as described in
+    `node_map21`, test whether simplifying on those nodes gives
+    you the same tree sequences.
+    '''
+    nodes2 = list(node_map21.keys())
+    nodes1 = list(node_map21.values())
+    ts1s = ts1.simplify(nodes1)
+    ts2s = ts2.simplify(nodes2)
+    tables1s = ts1s.tables
+    tables2s = ts2s.tables
+    tables1s.provenances.clear()
+    tables2s.provenances.clear()
+    assert tables1s == tables2s
 
-def check_muts_at(ts1, ts2, node_map21):
-    mtable1 = ts1.tables.mutations
-    mtable2 = ts2.tables.mutations
-    nodes1 = list(node_map21.keys())
-    nodes2 = list(node_map21.values())
-    new1 = tskit.TableCollection()
-    new2 = tskit.TableCollection()
-    for m in mtable1:
-        if m.node in nodes1:
-            s = ts1.site(m.site)
-            sid = new1.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
-            new1.mutations.add_row(site=sid, node=m.node, derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
-    for m in mtable2:
-        if m.node in nodes2:
-            s = ts2.site(m.site)
-            sid = new2.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
-            new2.mutations.add_row(site=sid, node=node_map21[m.node], derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
-    muts_eq = new1==new2
-
-def graft(ts1, ts2, node_map21, T1, T2):
+def graft(ts1, ts2, node_map21, T1=0, T2=0):
     """
     Returns a tree sequence obtained by grafting together the
     two tree sequences along the nodes in ``node_map21``,
@@ -116,7 +114,9 @@ def graft(ts1, ts2, node_map21, T1, T2):
     are run for different number of generations in each of ts1
     and ts2. If this is not the case set T1=T2=0
     """
-    ts1, ts2 = reset_time(ts1, ts2, T1-T2)
+    ts1, ts2 = reset_time(ts1.tables.tree_sequence(), ts2.tables.tree_sequence(), T1-T2)
+    # checking the trees are the same below the nodes_map21
+    check_shared_nodes(ts1, ts2, node_map21, T1, T2)
     new_tables = ts1.tables
     # mapping nodes in ts2 to new nodes in the grafted tables
     node_map2new = {}
