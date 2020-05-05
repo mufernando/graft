@@ -75,17 +75,23 @@ class TestGraft(unittest.TestCase):
         nodes = ts.samples()
         nodesg = [node_map[n] for n in nodes]
         tables = ts.simplify(nodes).tables
-        print("A", ts.tables.individuals)
-        print("B", tables.individuals)
+        # remove this - sanity check
+        for j, n in enumerate(nodes):
+            ia = ts.node(n).individual
+            ib = tables.nodes.individual[j]
+            assert(ts.tables.individuals[ia].metadata == tables.individuals[ib].metadata)
         tablesg = tsg.simplify(nodesg).tables
-        print("C", tsg.tables.individuals)
-        print("D", tablesg.individuals)
+        # remove this - sanity check
+        for j, n in enumerate(nodesg):
+            ia = tsg.node(n).individual
+            ib = tablesg.nodes.individual[j]
+            assert(tsg.tables.individuals[ia].metadata == tablesg.individuals[ib].metadata)
         tables.provenances.clear()
         tablesg.provenances.clear()
         if tablesg.individuals != tables.individuals:
-            for i1, i2 in zip(tables.individuals, tablesg.individuals):
-                print(i1)
-                print(i2)
+            for j, (i1, i2) in enumerate(zip(tables.individuals, tablesg.individuals)):
+                print(j, pyslim.decode_individual(i1.metadata))
+                print(j, pyslim.decode_individual(i2.metadata))
         self.assertEqual(tables, tablesg)
 
 
@@ -94,13 +100,10 @@ class TestGraft(unittest.TestCase):
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
 
-        print(ts2.tables.individuals)
         tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21, T1, T2)
-        print(ts2.tables.individuals)
 
         # resetting times so the trees are comparable
         ts1, ts2 = reset_time(ts1, ts2, T1-T2)
-        print(ts2.tables.individuals)
 
         # check that ts1 has not been changed by grafting
         self.verify_graft_simplification(ts1, tsg, node_map={n: n for n in ts1.samples()})
