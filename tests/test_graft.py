@@ -88,6 +88,12 @@ class TestGraft(unittest.TestCase):
             assert(tsg.tables.individuals[ia].metadata == tablesg.individuals[ib].metadata)
         tables.provenances.clear()
         tablesg.provenances.clear()
+        # remove this assert stuff - sanity check
+        assert(tables.nodes.num_rows == tablesg.nodes.num_rows)
+        for j in range(len(nodes)):
+            ia = tables.nodes.individual[j]
+            ib = tablesg.nodes.individual[j]
+            assert(tables.individuals[ia].metadata == tablesg.individuals[ib].metadata)
         if tablesg.individuals != tables.individuals:
             for j, (i1, i2) in enumerate(zip(tables.individuals, tablesg.individuals)):
                 print(j, pyslim.decode_individual(i1.metadata))
