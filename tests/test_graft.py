@@ -103,6 +103,8 @@ class TestGraft(unittest.TestCase):
         # all tables but the provenance table should be the same
         tables2.provenances.clear()
         tables2g.provenances.clear()
+        print(maps[2])
+        print('-----')
         if tables2g.individuals != tables2.individuals:
             for i1, i2 in zip(tables2.individuals, tables2g.individuals):
                 print(i1)

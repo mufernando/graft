@@ -136,7 +136,7 @@ def graft(ts1, ts2, node_map21, T1=0, T2=0):
             # translating pop to new
             n.population = pop_map2new[n.population]
             # adding individual
-            if n.individual > 0:
+            if n.individual >= 0:
                 ind = ts2.individual(n.individual)
                 iid = new_tables.individuals.add_row(flags=ind.flags, location=ind.location, metadata=ind.metadata)
                 ind_map2new[n.individual] = iid
