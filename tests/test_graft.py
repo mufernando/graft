@@ -46,10 +46,25 @@ class TestMatchNodes(unittest.TestCase):
             self.assertGreaterEqual(n2.time, T2)
             self.assertEqual(n1.metadata.slim_id, n2.metadata.slim_id)
 
-    def test_simple_example(self):
-        ts1, ts2 = get_examples(100, 100)
-        self.verify_match_nodes(ts1, ts2)
+    def verify_simplification_nodes(self, ts1, ts2):
+        T1, T2 = find_split_time(ts1, ts2)
+        node_map21 = match_nodes(ts1, ts2, T2)
+        nodes2 = list(node_map21.keys())
+        nodes1 = list(node_map21.values())
+        ts1, ts2 = reset_time(ts1.tables.tree_sequence(), ts2.tables.tree_sequence(), T1-T2)
+        ts1s = ts1.simplify(nodes1)
+        ts2s = ts2.simplify(nodes2)
+        tables1s = ts1s.tables
+        tables2s = ts2s.tables
+        tables1s.provenances.clear()
+        tables2s.provenances.clear()
+        self.assertEqual(tables1s, tables2s)
 
+    def test_simple_example(self):
+        for (T1, T2) in [(100, 100), (100, 200), (200, 10)]:
+            ts1, ts2 = get_examples(T1, T2)
+            self.verify_match_nodes(ts1, ts2)
+            self.verify_simplification_nodes(ts1, ts2)
 
 class TestGraft(unittest.TestCase):
 
@@ -65,25 +80,28 @@ class TestGraft(unittest.TestCase):
         tsg, maps = graft(ts1, ts2, node_map21, T1, T2)
         node_map2new = maps[0]
 
+        # resetting times so the trees are comparable
+        ts1, ts2 = reset_time(ts1, ts2, T1-T2)
+
         # ts1 from grafted
         ts1g = tsg.simplify(ts1.samples())
         tables1g = ts1g.tables
         tables1 = ts1.simplify().tables
-        self.assertEqual(tables1g.nodes, tables1.nodes)
-        self.assertEqual(tables1g.edges, tables1.edges)
-        self.assertEqual(tables1g.sites, tables1.sites)
-        self.assertEqual(tables1g.mutations, tables1.mutations)
+
+        # all tables but the provenance table should be the same
+        tables1.provenances.clear()
+        tables1g.provenances.clear()
+        self.assertEqual(tables1g, tables1)
 
         # testing ts2
         samp = ts2.samples()
         new_samp = np.array([node_map2new[nid] for nid in list(samp)])
-        tables2 = ts2.simplify().tables
-        tables2g = tsg.simplify(new_samp).tables
+        tables2 = ts2.simplify(samp, filter_populations=False, filter_individuals=False).tables
+        tables2g = tsg.simplify(new_samp, filter_populations=False, filter_individuals=False).tables
         # the test for the nodes table will be more complicated
-        # because of the changes pop id, indiv id, and time shift
-        # self.assertEqual(tables2g.nodes, tables2.nodes)
-        self.assertEqual(tables2g.edges, tables2.edges)
-        self.assertEqual(tables2g.sites, tables2.sites)
-        self.assertEqual(tables2g.mutations, tables2.mutations)
-        # tests: graft one tree to another, simplify over just the nodes in original tree, test if the tables are the same
-        # test: take a grafted tree, simplify over samples in first and second tree, graft them back together and test if the same
+        # because of the changes pop id, indiv ids
+        # all tables but the provenance table should be the same
+        tables2.provenances.clear()
+        tables2g.provenances.clear()
+        self.assertEqual(tables2g, tables2)
+
