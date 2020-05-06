@@ -15,6 +15,18 @@ def node_asdict(node):
 	"flags" : node.flags
     }
 
+def individual_asdict(individual):
+    return {
+        "flags" : individual.flags,
+        "location" : individual.location,
+        "metadata" : individual.metadata
+    }
+
+def population_asdict(population):
+    return {
+        "metadata" : population.metadata
+    }
+
 def find_split_time(ts1,ts2):
     """
     Given two SLiM tree sequences with shared history, this

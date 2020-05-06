@@ -74,30 +74,38 @@ class TestGraft(unittest.TestCase):
         # should be the same
         nodes = ts.samples()
         nodesg = [node_map[n] for n in nodes]
-        tables = ts.simplify(nodes).tables
-        # remove this - sanity check
-        for j, n in enumerate(nodes):
-            ia = ts.node(n).individual
-            ib = tables.nodes.individual[j]
-            assert(ts.tables.individuals[ia].metadata == tables.individuals[ib].metadata)
-        tablesg = tsg.simplify(nodesg).tables
-        # remove this - sanity check
-        for j, n in enumerate(nodesg):
-            ia = tsg.node(n).individual
-            ib = tablesg.nodes.individual[j]
-            assert(tsg.tables.individuals[ia].metadata == tablesg.individuals[ib].metadata)
+        # simplifying with filter_populations=False bc SLiM can start
+        # with id 1 instead of zero
+        tables = ts.simplify(nodes, filter_populations=False).tables
+        tablesg = tsg.simplify(nodesg, filter_populations=False).tables
         tables.provenances.clear()
         tablesg.provenances.clear()
-        # remove this assert stuff - sanity check
-        assert(tables.nodes.num_rows == tablesg.nodes.num_rows)
-        for j in range(len(nodes)):
-            ia = tables.nodes.individual[j]
-            ib = tablesg.nodes.individual[j]
-            assert(tables.individuals[ia].metadata == tablesg.individuals[ib].metadata)
-        if tablesg.individuals != tables.individuals:
-            for j, (i1, i2) in enumerate(zip(tables.individuals, tablesg.individuals)):
-                print(j, pyslim.decode_individual(i1.metadata))
-                print(j, pyslim.decode_individual(i2.metadata))
+        self.assertEqual(len(tables.nodes), len(tablesg.nodes))
+        # simplify does not put individuals in order
+        # but it does for nodes. that is why we check
+        # for equality of individuals as follows
+        for j in range(len(tables.nodes)):
+            na = node_asdict(tables.nodes[j])
+            nb = node_asdict(tablesg.nodes[j])
+            if not (na['individual'] == nb['individual'] == -1):
+                ia = tables.individuals[na['individual']]
+                ib = tablesg.individuals[nb['individual']]
+                self.assertEqual(ia.flags, ib.flags)
+                self.assertEqual(ia.metadata, ib.metadata)
+                self.assertTrue((ia.location==ib.location).all())
+            if not (na['population'] == nb['population'] == -1):
+                pa = tables.populations[na['population']]
+                pb = tablesg.populations[nb['population']]
+                self.assertEqual(pa.metadata, pb.metadata)
+            na['population']=nb['population']
+            na['individual']=nb['individual']
+            self.assertEqual(na, nb)
+        tables.individuals.clear()
+        tablesg.individuals.clear()
+        tables.populations.clear()
+        tablesg.populations.clear()
+        tables.nodes.clear()
+        tablesg.nodes.clear()
         self.assertEqual(tables, tablesg)
 
 
