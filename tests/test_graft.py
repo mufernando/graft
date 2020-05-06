@@ -85,6 +85,7 @@ class TestGraft(unittest.TestCase):
         # but it does for nodes. that is why we check
         # for equality of individuals as follows
         for j in range(len(tables.nodes)):
+            assert tables.nodes[j] == tablesg.nodes[j]
             na = node_asdict(tables.nodes[j])
             nb = node_asdict(tablesg.nodes[j])
             if not (na['individual'] == nb['individual'] == -1):
