@@ -15,6 +15,7 @@ def node_asdict(node):
 	"flags" : node.flags
     }
 
+
 def find_split_time(ts1,ts2):
     """
     Given two SLiM tree sequences with shared history, this
@@ -84,7 +85,7 @@ def reset_time(ts1, ts2, time_diff):
         ts1 = add_time(ts1, abs(time_diff))
     return(ts1, ts2)
 
-def check_shared_nodes(ts1, ts2, node_map21, T1=0, T2=0):
+def check_shared_nodes(ts1, ts2, node_map21):
     '''
     Given two tree sequences with shared nodes as described in
     `node_map21`, test whether simplifying on those nodes gives
@@ -116,7 +117,7 @@ def graft(ts1, ts2, node_map21, T1=0, T2=0):
     """
     ts1, ts2 = reset_time(ts1.tables.tree_sequence(), ts2.tables.tree_sequence(), T1-T2)
     # checking the trees are the same below the nodes_map21
-    check_shared_nodes(ts1, ts2, node_map21, T1, T2)
+    check_shared_nodes(ts1, ts2, node_map21)
     new_tables = ts1.tables
     # mapping nodes in ts2 to new nodes in the grafted tables
     node_map2new = {}
@@ -136,7 +137,7 @@ def graft(ts1, ts2, node_map21, T1=0, T2=0):
             # translating pop to new
             n.population = pop_map2new[n.population]
             # adding individual
-            if n.individual > 0:
+            if n.individual >= 0:
                 ind = ts2.individual(n.individual)
                 iid = new_tables.individuals.add_row(flags=ind.flags, location=ind.location, metadata=ind.metadata)
                 ind_map2new[n.individual] = iid
