@@ -74,18 +74,7 @@ def add_time(ts, dt):
     tables.nodes.set_columns(**nodes_dict)
     return tables.tree_sequence()
 
-def reset_time(ts1, ts2, time_diff):
-    '''
-    Give two tskit.TreeSequences(), returns the respective tree
-    sequences but now with correspondent times.
-    '''
-    if time_diff > 0:
-        ts2 = add_time(ts2, time_diff)
-    elif time_diff < 0:
-        ts1 = add_time(ts1, abs(time_diff))
-    return(ts1, ts2)
-
-def check_shared_nodes(ts1, ts2, node_map21):
+def _check_shared_nodes(ts1, ts2, node_map21):
     '''
     Given two tree sequences with shared nodes as described in
     `node_map21`, test whether simplifying on those nodes gives
@@ -101,7 +90,7 @@ def check_shared_nodes(ts1, ts2, node_map21):
     tables2s.provenances.clear()
     assert tables1s == tables2s
 
-def graft(ts1, ts2, node_map21, T1=0, T2=0):
+def graft(ts1, ts2, node_map21):
     """
     Returns a tree sequence obtained by grafting together the
     two tree sequences along the nodes in ``node_map21``,
@@ -115,9 +104,20 @@ def graft(ts1, ts2, node_map21, T1=0, T2=0):
     are run for different number of generations in each of ts1
     and ts2. If this is not the case set T1=T2=0
     """
-    ts1, ts2 = reset_time(ts1.tables.tree_sequence(), ts2.tables.tree_sequence(), T1-T2)
+    # making sure the ts are tskit ts
+    ts1, ts2 = ts1.tables.tree_sequence(), ts2.tables.tree_sequence()
+    # checking shift in time ago between ts1 and ts2
+    dt = [ts1.node(node_map21[a]).time - ts2.node(a).time for a in node_map21]
+    if len(set(dt)) > 1:
+        raise ValueError("Inconsistent time differences among the equivalent nodes.")
+    dT = int(dt[0])
+    if dT > 0:
+        ts2 = add_time(ts2, dT)
+    elif dT < 0:
+        ts1 = add_time(ts1, abs(dT))
     # checking the trees are the same below the nodes_map21
-    check_shared_nodes(ts1, ts2, node_map21)
+    _check_shared_nodes(ts1, ts2, node_map21)
+    # the grafted tree will bbe based off of ts1
     new_tables = ts1.tables
     # mapping nodes in ts2 to new nodes in the grafted tables
     node_map2new = {}

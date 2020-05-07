@@ -23,6 +23,14 @@ def get_examples(T1, T2, gens=100, N=100):
     ts2 = pyslim.load("tests/data/branch2.trees")
     return ts1, ts2
 
+def reset_time(ts1, ts2, dT):
+    '''Resets one of the trees so depending on difference in
+    maximum time ago between ts1 and ts2, dT'''
+    if dT > 0:
+        ts2 = add_time(ts2, dT)
+    elif dT < 0:
+        ts1 = add_time(ts1, abs(dT))
+    return (ts1, ts2)
 
 class TestFindSplitTime(unittest.TestCase):
 
@@ -114,7 +122,7 @@ class TestGraft(unittest.TestCase):
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
 
-        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21, T1, T2)
+        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
 
         # resetting times so the trees are comparable
         ts1, ts2 = reset_time(ts1, ts2, T1-T2)
