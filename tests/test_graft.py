@@ -23,6 +23,17 @@ def get_examples(T1, T2, gens=100, N=100):
     ts2 = pyslim.load("tests/data/branch2.trees")
     return ts1, ts2
 
+def node_asdict(node):
+    return {
+            "time" : node.time,
+            "population" : node.population,
+            "individual" : node.individual,
+            "metadata" : node.metadata,
+            "flags" : node.flags
+
+    }
+
+
 def reset_time(ts1, ts2, dT):
     '''Resets one of the trees so depending on difference in
     maximum time ago between ts1 and ts2, dT'''
@@ -117,15 +128,20 @@ class TestGraft(unittest.TestCase):
         tablesg.nodes.clear()
         self.assertEqual(tables, tablesg)
 
-    def verify_nodes_pop(self, ts1, ts2, tsg, new_nodes):
-        popg = [n.population for n in tsg.nodes()]
-        popnew = [p for i,p in enumerate(popg) if i in new_nodes]
-        pop1 = [n.population for n in ts1.nodes()]
-        pop2 = [n.population for n in ts2.nodes()]
-        # test new nodes are in new pops
-        self.assertTrue(set(pop1)-set(popnew) == set(pop1))
-        # test there are npop1+npop2 in grafted ts
-        self.assertTrue(len(set(pop1))+len(set(pop2))==len(set(popg)))
+    def verify_node_populations(self, ts1, ts2, node_map21, tsg, node_map2new, pop_map2new):
+        # check that ts1 pops remain unchanged
+        for j, p in enumerate(ts1.populations()):
+            self.assertEqual(p, tsg.population(j))
+        # check that each ts2 pop maps to a unique tsg pop
+        self.assertEqual(len(pop_map2new.keys()), len(set(pop_map2new.values())))
+        # check that ts2 pops are unchanged, and that newly added nodes have a new population
+        for n2 in range(ts2.num_nodes):
+            p2 =ts2.node(n2).population
+            ng = node_map2new[n2]
+            pg = tsg.node(ng).population
+            self.assertEqual(ts2.tables.populations[p2], tsg.tables.populations[pg])
+            if n2 not in node_map21:
+                self.assertGreaterEqual(pg, ts1.num_populations)
 
     def test_simple_example(self):
         ts1, ts2 = get_examples(35, 12, gens=4, N=4)
@@ -135,12 +151,11 @@ class TestGraft(unittest.TestCase):
         tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
 
         # resetting times so the trees are comparable
+        ts1, ts2 = ts1.tables.tree_sequence(), ts2.tables.tree_sequence()
         ts1, ts2 = reset_time(ts1, ts2, T1-T2)
 
         # check that nodes added to ts1 were assigned new pop
-        added_nodes = list(set(node_map2new)-set(node_map21))
-        new_nodes = np.array([node_map2new[n] for n in added_nodes])
-        self.verify_nodes_pop(ts1, ts2, tsg, new_nodes)
+        self.verify_node_populations( ts1, ts2, node_map21, tsg, node_map2new, pop_map2new)
 
         # check that ts1 has not been changed by grafting
         self.verify_graft_simplification(ts1, tsg, node_map={n: n for n in ts1.samples()})
