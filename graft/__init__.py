@@ -49,18 +49,13 @@ def match_nodes(ts1, ts2, T2=0):
     of the nodes.
     """
     node_map21 = {}
-    # getting slim ids for ts1
     slim_ids1 = np.array([n.metadata.slim_id for n in ts1.nodes()])
-    # looping through nodes in ts2 and finding equiv in ts1
-    for k, n in enumerate(ts2.nodes()):
-        # nodes should be equiv only at split or before it happened
-        if n.time >= T2:
-            # rn just checking slim ids, but would be good
-            # to compare other features (like the subtree
-            # simplifying on that node?)
-            nid = np.where(n.metadata.slim_id == slim_ids1)[0]
-            assert len(nid)== 1
-            node_map21[k] = nid[0]
+    slim_ids2 = np.array([n.metadata.slim_id for n in ts2.nodes()])
+    times = np.array([n.time for n in ts2.nodes()])
+    sorted_ids1 = np.argsort(slim_ids1)
+    matches = np.searchsorted(slim_ids1, slim_ids2, side='left',sorter=sorted_ids1)
+    is_2in1 = np.isin(slim_ids2, slim_ids1)
+    node_map21 = {a: sorted_ids1[b] for a, b in enumerate(matches) if times[a] >= T2 and is_2in1[a]}
     return node_map21
 
 def add_time(ts, dt):
