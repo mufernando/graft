@@ -6,16 +6,6 @@ import json
 def get_slim_gens(ts):
     return np.array([p.slim_generation for p in ts.slim_provenances])
 
-def node_asdict(node):
-    return {
-	"time" : node.time,
-	"population" : node.population,
-	"individual" : node.individual,
-	"metadata" : node.metadata,
-	"flags" : node.flags
-    }
-
-
 def find_split_time(ts1,ts2):
     """
     Given two SLiM tree sequences with shared history, this
@@ -138,7 +128,7 @@ def graft(ts1, ts2, node_map21):
                 ind_map2new[n.individual] = iid
                 n.individual=iid
             # addingn node
-            nid = new_tables.nodes.add_row(**node_asdict(n))
+            nid = new_tables.nodes.add_row(**{"time" : n.time, "population" : n.population, "individual" : n.individual, "metadata" : n.metadata, "flags" : n.flags})
             node_map2new[k] = nid
     # creating a set with nodes that are new to ts1
     new_nodes=set(node_map2new)-set(node_map21)
