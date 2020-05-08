@@ -96,6 +96,7 @@ class TestGraft(unittest.TestCase):
             na = node_asdict(tables.nodes[j])
             nb = node_asdict(tablesg.nodes[j])
             if not (na['individual'] == nb['individual'] == -1):
+                self.assertFalse((na['individual'] == -1) or (nb['individual'] == -1))
                 ia = tables.individuals[na['individual']]
                 ib = tablesg.individuals[nb['individual']]
                 self.assertEqual(ia.flags, ib.flags)
@@ -116,6 +117,15 @@ class TestGraft(unittest.TestCase):
         tablesg.nodes.clear()
         self.assertEqual(tables, tablesg)
 
+    def verify_nodes_pop(self, ts1, ts2, tsg, new_nodes):
+        popg = [n.population for n in tsg.nodes()]
+        popnew = [p for i,p in enumerate(popg) if i in new_nodes]
+        pop1 = [n.population for n in ts1.nodes()]
+        pop2 = [n.population for n in ts2.nodes()]
+        # test new nodes are in new pops
+        self.assertTrue(set(pop1)-set(popnew) == set(pop1))
+        # test there are npop1+npop2 in grafted ts
+        self.assertTrue(len(set(pop1))+len(set(pop2))==len(set(popg)))
 
     def test_simple_example(self):
         ts1, ts2 = get_examples(35, 12, gens=4, N=4)
@@ -127,11 +137,13 @@ class TestGraft(unittest.TestCase):
         # resetting times so the trees are comparable
         ts1, ts2 = reset_time(ts1, ts2, T1-T2)
 
+        # check that nodes added to ts1 were assigned new pop
+        added_nodes = list(set(node_map2new)-set(node_map21))
+        new_nodes = np.array([node_map2new[n] for n in added_nodes])
+        self.verify_nodes_pop(ts1, ts2, tsg, new_nodes)
+
         # check that ts1 has not been changed by grafting
         self.verify_graft_simplification(ts1, tsg, node_map={n: n for n in ts1.samples()})
-
-        print(ind_map2new)
-        print('-----')
 
         # check that ts2 has not been changed by grafting
         full_sample_map = node_map2new.copy()
