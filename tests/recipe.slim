@@ -10,7 +10,7 @@ initialize() {
     initializeRecombinationRate(1e-8);
 }
 
-1 late() {
+1 early() {
     if (exists("infile")) {
         if (!fileExists(infile)) {
            stop("File " + infile + " does not exist in directory " + getwd());
