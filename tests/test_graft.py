@@ -147,7 +147,8 @@ class TestGraft(unittest.TestCase):
         tablesg.nodes.clear()
         self.assertEqual(tables, tablesg)
 
-    def verify_node_populations(self, ts1, ts2, node_map21, tsg, node_map2new, pop_map2new):
+    def verify_node_populations(self, ts1, ts2, node_map21):
+        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
         # check that ts1 pops remain unchanged
         for j, p in enumerate(ts1.populations()):
             self.assertEqual(p, tsg.population(j))
@@ -182,7 +183,7 @@ class TestGraft(unittest.TestCase):
         ts1, ts2 = reset_time(ts1, ts2, T1-T2)
 
         # check that nodes added to ts1 were assigned new pop
-        self.verify_node_populations( ts1, ts2, node_map21, tsg, node_map2new, pop_map2new)
+        self.verify_node_populations( ts1, ts2, node_map21)
 
         # check that ts1 has not been changed by grafting
         self.verify_graft_simplification(ts1, tsg, node_map={n: n for n in ts1.samples()})
