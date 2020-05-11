@@ -2,6 +2,7 @@ import os
 import unittest
 import numpy as np
 
+import msprime
 import tskit
 import pyslim
 from graft import *
@@ -13,15 +14,33 @@ def run_slim_script(slimfile, args=''):
     return out
 
 
-def get_examples(T1, T2, gens=100, N=100):
+def get_slim_examples(T1, T2, gens=100, N=100, recipe_path="tests/recipe.slim"):
     print(os.getcwd())
     # note: could make N and gens parameters here
-    run_slim_script("tests/recipe.slim", args=f"-d N={N} -d gens={gens} -d \"outfile='tests/data/root.trees'\"")
-    run_slim_script("tests/recipe.slim", args=f"-d N={N} -d gens={T1} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch1.trees\"'")
-    run_slim_script("tests/recipe.slim", args=f"-d N={N} -d gens={T2} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch2.trees\"'")
+    run_slim_script(recipe_path, args=f"-d N={N} -d gens={gens} -d \"outfile='tests/data/root.trees'\"")
+    run_slim_script(recipe_path, args=f"-d N={N} -d gens={T1} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch1.trees\"'")
+    run_slim_script(recipe_path, args=f"-d N={N} -d gens={T2} -d \"infile='tests/data/root.trees'\" -d 'outfile=\"tests/data/branch2.trees\"'")
     ts1 = pyslim.load("tests/data/branch1.trees")
     ts2 = pyslim.load("tests/data/branch2.trees")
     return ts1, ts2
+
+def get_msprime_examples(T=100, N=100, n=10):
+    # we assume after the split the ts are completely independent
+    M = [[0,0],[0,0]]
+    population_configurations = [
+        msprime.PopulationConfiguration(sample_size=n, initial_size=N),
+        msprime.PopulationConfiguration(sample_size=n, initial_size=N)
+    ]
+    demographic_events = [
+        msprime.CensusEvent(time=T),
+        msprime.MassMigration(T, source=1, dest=0, proportion=1)
+    ]
+    dd = msprime.DemographyDebugger(
+        population_configurations=population_configurations,
+        migration_matrix=M,
+        demographic_events=demographic_events)
+    dd.print_history()
+    ts = msprime.simulate(Ne=N,population_configurations=population_configurations, demographic_events=demographic_events, migration_matrix=M, length=2e4, recombination_rate=1e-8, mutation_rate=1e-8)
 
 def node_asdict(node):
     return {
@@ -47,7 +66,7 @@ class TestFindSplitTime(unittest.TestCase):
 
     def test_simple_example(self):
         for (T1, T2) in [(100, 100), (100, 200), (200, 10)]:
-            ts1, ts2 = get_examples(T1, T2)
+            ts1, ts2 = get_slim_examples(T1, T2)
             S1, S2 = find_split_time(ts1, ts2)
             self.assertEqual(S1, T1)
             self.assertEqual(S2, T2)
@@ -81,7 +100,7 @@ class TestMatchNodes(unittest.TestCase):
 
     def test_simple_example(self):
         for (T1, T2) in [(100, 100), (100, 200), (200, 10)]:
-            ts1, ts2 = get_examples(T1, T2)
+            ts1, ts2 = get_slim_examples(T1, T2)
             self.verify_match_nodes(ts1, ts2)
             self.verify_simplification_nodes(ts1, ts2)
 
@@ -143,8 +162,16 @@ class TestGraft(unittest.TestCase):
             if n2 not in node_map21:
                 self.assertGreaterEqual(pg, ts1.num_populations)
 
+    def test_nonwf(self):
+        ts1, ts2 = get_slim_examples(100,100, gens=100, N=100, recipe_path="tests/recipe_nonwf1.slim")
+        T1, T2 = find_split_time(ts1, ts2)
+        node_map21 = match_nodes(ts1, ts2, T2)
+
+        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
+
+
     def test_simple_example(self):
-        ts1, ts2 = get_examples(35, 12, gens=4, N=4)
+        ts1, ts2 = get_slim_examples(35, 12, gens=4, N=4)
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
 
