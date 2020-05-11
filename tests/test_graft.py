@@ -35,11 +35,11 @@ def get_msprime_examples(T=100, N=100, n=10):
         msprime.CensusEvent(time=T),
         msprime.MassMigration(T, source=1, dest=0, proportion=1)
     ]
-    dd = msprime.DemographyDebugger(
-        population_configurations=population_configurations,
-        migration_matrix=M,
-        demographic_events=demographic_events)
-    dd.print_history()
+    #dd = msprime.DemographyDebugger(
+    #    population_configurations=population_configurations,
+    #    migration_matrix=M,
+    #    demographic_events=demographic_events)
+    #dd.print_history()
     ts = msprime.simulate(Ne=N,population_configurations=population_configurations, demographic_events=demographic_events, migration_matrix=M, length=2e4, recombination_rate=1e-8, mutation_rate=1e-8)
 
 def node_asdict(node):
@@ -116,6 +116,9 @@ class TestGraft(unittest.TestCase):
         # with id 1 instead of zero
         tables = ts.simplify(nodes, filter_populations=False).tables
         tablesg = tsg.simplify(nodesg, filter_populations=False).tables
+        self.assertGreaterEqual(len(tablesg.provenances), lentables.provenances)
+        for p in tables.provenances:
+            self.assertTrue(p in tablesg.provenances)
         tables.provenances.clear()
         tablesg.provenances.clear()
         self.assertEqual(len(tables.nodes), len(tablesg.nodes))

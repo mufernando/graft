@@ -152,6 +152,11 @@ def graft(ts1, ts2, node_map21):
             sid = new_tables.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
             mid=new_tables.mutations.add_row(site=sid, node=new_node,derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
             new_muts[k] = mid
+    # grafting provenance table
+    for p1, p2 in zip(ts1.provenances(),ts2.provenances()):
+        if p1 != p2:
+            new_tables.provenances.add_row(record = p2.record,
+                                           timestamp = p2.timestamp)
     new_tables.sort()
     new_tables.deduplicate_sites()
     new_tables.build_index()
