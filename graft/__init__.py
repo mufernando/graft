@@ -1,6 +1,7 @@
 import numpy as np
 import pyslim
 import tskit
+import tskit.provenance as tsp
 import json
 
 def get_slim_gens(ts):
@@ -74,6 +75,24 @@ def _check_shared_nodes(ts1, ts2, node_map21):
     tables1s.provenances.clear()
     tables2s.provenances.clear()
     assert tables1s == tables2s
+
+def get_graft_prov_record(ts2, node_map21):
+    # TODO: this is NOT the definitive way it should be handled
+    ts2_prov_records = [prov.record for prov in ts2.tables.provenances]
+    record = {
+        "schema_version": "1.0.0",
+        "software": {
+            "name": "tskit",
+            "version": tskit.__version__,
+        },
+        "parameters": {
+            "command" : "graft",
+            "ts2_prov_records" : ts2_prov_records,
+            "node_map21" : node_map21
+        },
+        "environment": tsp.get_environment()
+    }
+    return str(record)
 
 def graft(ts1, ts2, node_map21):
     """
@@ -150,13 +169,15 @@ def graft(ts1, ts2, node_map21):
             # add site
             s = ts2.site(m.site)
             sid = new_tables.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
-            mid=new_tables.mutations.add_row(site=sid, node=new_node,derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
+            mid=new_tables.mutations.add_row(site=sid,
+                                             node=new_node, derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
             new_muts[k] = mid
+    # migration table is not grafted
+    new_tables.migrations.clear()
     # grafting provenance table
-    for p1, p2 in zip(ts1.provenances(),ts2.provenances()):
-        if p1 != p2:
-            new_tables.provenances.add_row(record = p2.record,
-                                           timestamp = p2.timestamp)
+    new_tables.provenances.add_row(get_graft_prov_record(ts2,
+                                                         node_map21))
+    # sorting, deduplicating sites, and re-computing mutation parents
     new_tables.sort()
     new_tables.deduplicate_sites()
     new_tables.build_index()
