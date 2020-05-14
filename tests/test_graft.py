@@ -197,7 +197,7 @@ class TestGraft(unittest.TestCase):
 
     def test_msprime_example(self):
         T = 100
-        ts = get_msprime_example(T, 100, 5)
+        ts = get_msprime_example(T, 50, 2)
         shared_nodes = [n.id for n in ts.nodes() if n.time >= T]
         pop1 = list(ts.samples(population=0))
         pop2 = list(ts.samples(population=1))
@@ -205,9 +205,26 @@ class TestGraft(unittest.TestCase):
         ts2_samples = shared_nodes + pop2
         assert len(ts1_samples) == len(ts2_samples)
         node_map21 = {i: i for i in range(len(shared_nodes))}
+        ts = ts.simplify(ts1_samples+pop2)
         ts1 = ts.simplify(ts1_samples)
         ts2 = ts.simplify(ts2_samples)
         tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
+
+        # check that nodes added to ts1 were assigned new pop
+        self.verify_node_populations( ts1, ts2, node_map21)
+
+        # check that ts1 has not been changed by grafting
+        self.verify_graft_simplification(ts1, tsg, node_map={n: n for n in ts1.samples()})
+
+        # check that ts2 has not been changed by grafting
+        full_sample_map = node_map2new.copy()
+        # we'll need all the samples of ts2 in the node map:
+        for n in ts2.samples():
+            if n in node_map2new:
+                pass
+            else:
+                full_sample_map[n] = n
+        self.verify_graft_simplification(ts2, tsg, node_map=full_sample_map)
 
     def test_slim_nonwf_example(self):
         ts1, ts2 = get_slim_examples(10,10, gens=10, N=10, recipe_path="tests/recipe_nonwf1.slim")
