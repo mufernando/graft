@@ -180,7 +180,7 @@ class TestGraft(unittest.TestCase):
         self.assertEqual(tables, tablesg)
 
     def verify_node_populations(self, ts1, ts2, node_map21):
-        tsg, (node_map2new, pop_map2new, ind_map2new, mig_map2new) = graft(ts1, ts2, node_map21)
+        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
         # check that ts1 pops remain unchanged
         for j, p in enumerate(ts1.populations()):
             self.assertEqual(p, tsg.population(j))
@@ -209,7 +209,7 @@ class TestGraft(unittest.TestCase):
         node_map21 = {i: i for i in range(len(shared_nodes))}
         ts1 = ts.simplify(ts1_samples)
         ts2 = ts.simplify(ts2_samples)
-        tsg, (node_map2new, pop_map2new, ind_map2new, mig_map2new) = graft(ts1, ts2, node_map21)
+        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
 
         # check that nodes added to ts1 were assigned new pop
         self.verify_node_populations(ts1, ts2, node_map21)
@@ -228,18 +228,18 @@ class TestGraft(unittest.TestCase):
         self.verify_graft_simplification(ts2, tsg, node_map=full_sample_map)
 
     def test_slim_nonwf_example(self):
-        ts1, ts2 = get_slim_examples(10,10, gens=10, N=10, recipe_path="tests/recipe_nonwf1.slim")
+        ts1, ts2 = get_slim_examples(10,10, gens=100, N=100, recipe_path="tests/recipe_nonwf1.slim")
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
 
-        tsg, (node_map2new, pop_map2new, ind_map2new, mig_map2new) = graft(ts1, ts2, node_map21)
+        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
 
     def test_slim_example(self):
         ts1, ts2 = get_slim_examples(15, 10, gens=5, N=5)
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
 
-        tsg, (node_map2new, pop_map2new, ind_map2new, mig_map2new) = graft(ts1, ts2, node_map21)
+        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
 
         # resetting times so the trees are comparable
         ts1, ts2 = ts1.tables.tree_sequence(), ts2.tables.tree_sequence()

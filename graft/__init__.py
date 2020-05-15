@@ -176,7 +176,6 @@ def graft(ts1, ts2, node_map21):
                                              node=new_node, derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
             new_muts[k] = mid
     # migration table
-    mig_map2new = {}
     for i, g in enumerate(ts2.migrations()):
         # only migrations before the split
         if g.time < dT:
@@ -187,7 +186,6 @@ def graft(ts1, ts2, node_map21):
             source = pop_map2new[g.source]
             dest = pop_map2new[g.dest]
             gid=new_tables.migrations.add_row(left=g.left, right=g.right, node=node, source=source, dest=dest, time=g.time, metadata=g.metadata)
-            mig_map2new[i] = gid
     new_tables.migrations.clear()
     # grafting provenance table
     new_tables.provenances.add_row(get_graft_prov_record(ts2,
@@ -198,4 +196,4 @@ def graft(ts1, ts2, node_map21):
     new_tables.build_index()
     new_tables.compute_mutation_parents()
     return new_tables.tree_sequence(), (node_map2new, pop_map2new,
-                                        ind_map2new, mig_map2new)
+                                        ind_map2new)
