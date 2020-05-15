@@ -1,13 +1,14 @@
 import numpy as np
-import pyslim
 import tskit
 import tskit.provenance as tsp
 import json
 
+
 def get_slim_gens(ts):
     return np.array([p.slim_generation for p in ts.slim_provenances])
 
-def find_split_time(ts1,ts2):
+
+def find_split_time(ts1, ts2):
     """
     Given two SLiM tree sequences with shared history, this
     function returns the split times (in time ago) for each tree.
@@ -17,7 +18,7 @@ def find_split_time(ts1,ts2):
     # counting SLiM prov before chains diff
     j = 0
     # finding the first diff between provenance chains
-    for p1, p2 in zip(ts1.provenances(),ts2.provenances()):
+    for p1, p2 in zip(ts1.provenances(), ts2.provenances()):
         if p1 != p2:
             break
         record = json.loads(p1.record)
@@ -25,10 +26,11 @@ def find_split_time(ts1,ts2):
             j += 1
     if j == 0:
         raise ValueError("No shared SLiM provenance entries.")
-    last_slim_gen = ts1.slim_provenances[j-1].slim_generation
+    last_slim_gen = ts1.slim_provenances[j - 1].slim_generation
     T1 = abs(last_slim_gen - slim_gens1[-1])
     T2 = abs(last_slim_gen - slim_gens2[-1])
     return T1, T2
+
 
 def match_nodes(ts1, ts2, T2=0):
     """
@@ -44,10 +46,16 @@ def match_nodes(ts1, ts2, T2=0):
     slim_ids2 = np.array([n.metadata.slim_id for n in ts2.nodes()])
     times = np.array([n.time for n in ts2.nodes()])
     sorted_ids1 = np.argsort(slim_ids1)
-    matches = np.searchsorted(slim_ids1, slim_ids2, side='left',sorter=sorted_ids1)
+    matches = np.searchsorted(
+        slim_ids1,
+        slim_ids2,
+        side='left',
+        sorter=sorted_ids1)
     is_2in1 = np.isin(slim_ids2, slim_ids1)
-    node_map21 = {a: sorted_ids1[b] for a, b in enumerate(matches) if times[a] >= T2 and is_2in1[a]}
+    node_map21 = {a: sorted_ids1[b] for a, b in enumerate(
+        matches) if times[a] >= T2 and is_2in1[a]}
     return node_map21
+
 
 def add_time(ts, dt):
     '''
@@ -62,6 +70,7 @@ def add_time(ts, dt):
     migrations_dict['time'] = migrations_dict['time'] + dt
     tables.migrations.set_columns(**migrations_dict)
     return tables.tree_sequence()
+
 
 def _check_shared_nodes(ts1, ts2, node_map21):
     '''
@@ -79,6 +88,7 @@ def _check_shared_nodes(ts1, ts2, node_map21):
     tables2s.provenances.clear()
     assert tables1s == tables2s
 
+
 def get_graft_prov_record(ts2, node_map21):
     # TODO: this is NOT the definitive way it should be handled
     ts2_prov_records = [prov.record for prov in ts2.tables.provenances]
@@ -89,13 +99,14 @@ def get_graft_prov_record(ts2, node_map21):
             "version": tskit.__version__,
         },
         "parameters": {
-            "command" : "graft",
-            "ts2_prov_records" : ts2_prov_records,
-            "node_map21" : node_map21
+            "command": "graft",
+            "ts2_prov_records": ts2_prov_records,
+            "node_map21": node_map21
         },
         "environment": tsp.get_environment()
     }
     return str(record)
+
 
 def graft(ts1, ts2, node_map21):
     """
@@ -116,7 +127,8 @@ def graft(ts1, ts2, node_map21):
     # checking shift in time ago between ts1 and ts2
     dt = [ts1.node(node_map21[a]).time - ts2.node(a).time for a in node_map21]
     if len(set(dt)) > 1:
-        raise ValueError("Inconsistent time differences among the equivalent nodes.")
+        raise ValueError(
+            "Inconsistent time differences among the equivalent nodes.")
     dT = int(dt[0])
     if dT > 0:
         ts2 = add_time(ts2, dT)
@@ -136,33 +148,43 @@ def graft(ts1, ts2, node_map21):
     # need to loop throgh nodes in ts2, find the unmatched nodes
     # and add them to the ts1 node table
     for k, n in enumerate(ts2.nodes()):
-        if not k in node_map21:
-            if not n.population in pop_map2new:
+        if k not in node_map21:
+            if n.population not in pop_map2new:
                 pop = ts2.tables.populations[n.population]
                 pid = new_tables.populations.add_row(pop.metadata)
-                pop_map2new[n.population]=pid
+                pop_map2new[n.population] = pid
             # translating pop to new
             n.population = pop_map2new[n.population]
             # adding individual
             if n.individual >= 0:
                 ind = ts2.individual(n.individual)
-                iid = new_tables.individuals.add_row(flags=ind.flags, location=ind.location, metadata=ind.metadata)
+                iid = new_tables.individuals.add_row(
+                    flags=ind.flags, location=ind.location,
+                    metadata=ind.metadata)
                 ind_map2new[n.individual] = iid
-                n.individual=iid
+                n.individual = iid
             # addingn node
-            nid = new_tables.nodes.add_row(**{"time" : n.time, "population" : n.population, "individual" : n.individual, "metadata" : n.metadata, "flags" : n.flags})
+            nid = new_tables.nodes.add_row(**{"time": n.time,
+                                              "population": n.population,
+                                              "individual": n.individual,
+                                              "metadata": n.metadata,
+                                              "flags": n.flags})
             node_map2new[k] = nid
     # creating a set with nodes that are new to ts1
-    new_nodes=set(node_map2new)-set(node_map21)
+    new_nodes = set(node_map2new) - set(node_map21)
     # now we need to add the edges
     for i, e in enumerate(ts2.edges()):
         if (e.parent in new_nodes) or (e.child in new_nodes):
-            if (e.parent in new_nodes) and (not e.child in new_nodes):
+            if (e.parent in new_nodes) and (e.child not in new_nodes):
                 raise ValueError("Cannot graft nodes above existing nodes.")
             # translating the node ids from ts2 to new
             new_parent = node_map2new[e.parent]
             new_child = node_map2new[e.child]
-            new_tables.edges.add_row(left = e.left, right = e.right, parent=new_parent, child=new_child)
+            new_tables.edges.add_row(
+                left=e.left,
+                right=e.right,
+                parent=new_parent,
+                child=new_child)
     # grafting sites and muts
     new_muts = {}
     for k, m in enumerate(ts2.mutations()):
@@ -171,9 +193,16 @@ def graft(ts1, ts2, node_map21):
             new_node = node_map2new[m.node]
             # add site
             s = ts2.site(m.site)
-            sid = new_tables.sites.add_row(position=s.position, ancestral_state="", metadata=s.metadata)
-            mid=new_tables.mutations.add_row(site=sid,
-                                             node=new_node, derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
+            sid = new_tables.sites.add_row(
+                position=s.position,
+                ancestral_state="",
+                metadata=s.metadata)
+            mid = new_tables.mutations.add_row(
+                site=sid,
+                node=new_node,
+                derived_state=m.derived_state,
+                parent=tskit.NULL,
+                metadata=m.metadata)
             new_muts[k] = mid
     # migration table
     for i, g in enumerate(ts2.migrations()):
@@ -181,11 +210,19 @@ def graft(ts1, ts2, node_map21):
         if g.time < dT:
             node = node_map2new[g.node]
             if not (g.source in pop_map2new and g.dest in pop_map2new
-):
-                raise ValueError("Cannot graft trees that are not independent after the split")
+                    ):
+                raise ValueError(
+                    "Cannot graft trees that are dependent after the split")
             source = pop_map2new[g.source]
             dest = pop_map2new[g.dest]
-            gid=new_tables.migrations.add_row(left=g.left, right=g.right, node=node, source=source, dest=dest, time=g.time, metadata=g.metadata)
+            new_tables.migrations.add_row(
+                left=g.left,
+                right=g.right,
+                node=node,
+                source=source,
+                dest=dest,
+                time=g.time,
+                metadata=g.metadata)
     new_tables.migrations.clear()
     # grafting provenance table
     new_tables.provenances.add_row(get_graft_prov_record(ts2,
