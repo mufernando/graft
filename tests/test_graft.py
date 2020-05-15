@@ -42,11 +42,11 @@ def get_msprime_mig_example(T=100, t=10, N=100, n=10):
         msprime.MassMigration(T, source=1, dest=0, proportion=1),
         msprime.CensusEvent(time=T)
     ]
-    dd = msprime.DemographyDebugger(
-        population_configurations=population_configurations,
-        migration_matrix=M,
-        demographic_events=demographic_events)
-    dd.print_history()
+    #dd = msprime.DemographyDebugger(
+    #   population_configurations=population_configurations,
+    #   migration_matrix=M,
+    #   demographic_events=demographic_events)
+    #dd.print_history()
     ts = msprime.simulate(Ne=N,population_configurations=population_configurations,
                      demographic_events=demographic_events,
                      migration_matrix=M, length=2e4,
@@ -62,8 +62,8 @@ def get_msprime_example(T=100, N=100, n=10):
         msprime.PopulationConfiguration(sample_size=n)
     ]
     demographic_events = [
-        msprime.MassMigration(T, source=1, dest=0, proportion=1),
-        msprime.CensusEvent(time=T)
+        msprime.CensusEvent(time=T),
+        msprime.MassMigration(T, source=1, dest=0, proportion=1)
     ]
     #dd = msprime.DemographyDebugger(
     #    population_configurations=population_configurations,
@@ -180,7 +180,7 @@ class TestGraft(unittest.TestCase):
         self.assertEqual(tables, tablesg)
 
     def verify_node_populations(self, ts1, ts2, node_map21):
-        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
+        tsg, (node_map2new, pop_map2new, ind_map2new, mig_map2new) = graft(ts1, ts2, node_map21)
         # check that ts1 pops remain unchanged
         for j, p in enumerate(ts1.populations()):
             self.assertEqual(p, tsg.population(j))
@@ -198,6 +198,8 @@ class TestGraft(unittest.TestCase):
     def test_msprime_example(self):
         T = 100
         ts = get_msprime_example(T, 50, 2)
+        #ts = get_msprime_mig_example(30, t=10, N=100, n=2)
+        # simpifying to get things in the right order
         shared_nodes = [n.id for n in ts.nodes() if n.time >= T]
         pop1 = list(ts.samples(population=0))
         pop2 = list(ts.samples(population=1))
@@ -205,13 +207,12 @@ class TestGraft(unittest.TestCase):
         ts2_samples = shared_nodes + pop2
         assert len(ts1_samples) == len(ts2_samples)
         node_map21 = {i: i for i in range(len(shared_nodes))}
-        ts = ts.simplify(ts1_samples+pop2)
         ts1 = ts.simplify(ts1_samples)
         ts2 = ts.simplify(ts2_samples)
-        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
+        tsg, (node_map2new, pop_map2new, ind_map2new, mig_map2new) = graft(ts1, ts2, node_map21)
 
         # check that nodes added to ts1 were assigned new pop
-        self.verify_node_populations( ts1, ts2, node_map21)
+        self.verify_node_populations(ts1, ts2, node_map21)
 
         # check that ts1 has not been changed by grafting
         self.verify_graft_simplification(ts1, tsg, node_map={n: n for n in ts1.samples()})
@@ -231,14 +232,14 @@ class TestGraft(unittest.TestCase):
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
 
-        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
+        tsg, (node_map2new, pop_map2new, ind_map2new, mig_map2new) = graft(ts1, ts2, node_map21)
 
     def test_slim_example(self):
         ts1, ts2 = get_slim_examples(15, 10, gens=5, N=5)
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
 
-        tsg, (node_map2new, pop_map2new, ind_map2new) = graft(ts1, ts2, node_map21)
+        tsg, (node_map2new, pop_map2new, ind_map2new, mig_map2new) = graft(ts1, ts2, node_map21)
 
         # resetting times so the trees are comparable
         ts1, ts2 = ts1.tables.tree_sequence(), ts2.tables.tree_sequence()

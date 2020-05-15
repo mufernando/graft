@@ -58,6 +58,9 @@ def add_time(ts, dt):
     nodes_dict = tables.nodes.asdict()
     nodes_dict['time'] = nodes_dict['time'] + dt
     tables.nodes.set_columns(**nodes_dict)
+    migrations_dict = tables.migrations.asdict()
+    migrations_dict['time'] = migrations_dict['time'] + dt
+    tables.migrations.set_columns(**migrations_dict)
     return tables.tree_sequence()
 
 def _check_shared_nodes(ts1, ts2, node_map21):
@@ -172,7 +175,19 @@ def graft(ts1, ts2, node_map21):
             mid=new_tables.mutations.add_row(site=sid,
                                              node=new_node, derived_state=m.derived_state, parent=tskit.NULL, metadata=m.metadata)
             new_muts[k] = mid
-    # migration table is not grafted
+    # migration table
+    mig_map2new = {}
+    for i, g in enumerate(ts2.migrations()):
+        # only migrations before the split
+        if g.time < dT:
+            node = node_map2new[g.node]
+            if not (g.source in pop_map2new and g.dest in pop_map2new
+):
+                raise ValueError("Cannot graft trees that are not independent after the split")
+            source = pop_map2new[g.source]
+            dest = pop_map2new[g.dest]
+            gid=new_tables.migrations.add_row(left=g.left, right=g.right, node=node, source=source, dest=dest, time=g.time, metadata=g.metadata)
+            mig_map2new[i] = gid
     new_tables.migrations.clear()
     # grafting provenance table
     new_tables.provenances.add_row(get_graft_prov_record(ts2,
@@ -182,4 +197,5 @@ def graft(ts1, ts2, node_map21):
     new_tables.deduplicate_sites()
     new_tables.build_index()
     new_tables.compute_mutation_parents()
-    return new_tables.tree_sequence(), (node_map2new, pop_map2new, ind_map2new)
+    return new_tables.tree_sequence(), (node_map2new, pop_map2new,
+                                        ind_map2new, mig_map2new)
