@@ -278,10 +278,11 @@ class TestGraft(unittest.TestCase):
             ts1, ts2, node_map21)
 
     def test_slim_example(self):
-        ts1, ts2 = get_slim_examples(15, 10, gens=5, N=5)
+        ts1, ts2 = get_slim_examples(15, 30, gens=100, N=100)
         T1, T2 = find_split_time(ts1, ts2)
         node_map21 = match_nodes(ts1, ts2, T2)
-
+        for k in node_map21:
+            assert(k == node_map21[k])
         tsg, (node_map2new, pop_map2new, ind_map2new) = graft(
             ts1, ts2, node_map21)
 
